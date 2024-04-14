@@ -1,6 +1,6 @@
 import string
 import bcrypt
-from flask import Flask, redirect, render_template, url_for, request, Markup , jsonify
+from flask import Flask, redirect, render_template, url_for, request, Markup
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from wtforms import StringField, PasswordField, SubmitField
@@ -20,9 +20,6 @@ from PIL import Image
 from utils.model import ResNet9
 from utils.fertilizer import fertilizer_dic
 from utils.disease import disease_dic
-import uvicorn
-from fastapi import FastAPI
-import requests
 
 # -------------------------LOADING THE TRAINED MODELS -----------------------------------------------
 
@@ -295,14 +292,17 @@ def disease_prediction():
 
 @ app.route('/crop-predict', methods=['POST'])
 def crop_prediction():
-        data = request.get_json()
-        N = data.get("nitrogen")
-        P = data.get("phosphorous")
-        K = data.get("pottasium")
-        ph = data.get("ph")
-        rainfall = data.get("rainfall")
-        state = data.get ("state")
-        city = data.get("city")
+    title = '- Crop Recommendation'
+
+    if request.method == 'POST':
+        N = int(request.form['nitrogen'])
+        P = int(request.form['phosphorous'])
+        K = int(request.form['pottasium'])
+        ph = float(request.form['ph'])
+        rainfall = float(request.form['rainfall'])
+
+        # state = request.form.get("stt")
+        city = request.form.get("city")
 
         if weather_fetch(city) != None:
             temperature, humidity = weather_fetch(city)
@@ -310,14 +310,11 @@ def crop_prediction():
             my_prediction = crop_recommendation_model.predict(data)
             final_prediction = my_prediction[0]
 
-            response = {
-                "crop-prediction": final_prediction,
-                }
-            return jsonify(response)
+            return render_template('crop-result.html', prediction=final_prediction, title=title)
 
         else:
 
-            return "Try Again"
+            return render_template('try_again.html', title=title)
 
 # render fertilizer recommendation result page
 
@@ -326,12 +323,13 @@ def crop_prediction():
 
 @ app.route('/fertilizer-predict', methods=['POST'])
 def fert_recommend():
-    
-    data = request.get_json()
-    crop_name = data.get('cropname')
-    N = data.get('nitrogen')
-    P = data.get('phosphorous')
-    K = data.get('pottasium')
+    title = '- Fertilizer Suggestion'
+
+    crop_name = str(request.form['cropname'])
+    N = int(request.form['nitrogen'])
+    P = int(request.form['phosphorous'])
+    K = int(request.form['pottasium'])
+    # ph = float(request.form['ph'])
 
     df = pd.read_csv('Data/fertilizer.csv')
 
@@ -362,10 +360,8 @@ def fert_recommend():
 
     response = Markup(str(fertilizer_dic[key]))
 
-    # return render_template('fertilizer-result.html', recommendation=response, title=title)
-    return jsonify({
-                "fertilizer": response,
-                })
+    return render_template('fertilizer-result.html', recommendation=response, title=title)
+
 
 @app.route("/display")
 def querydisplay():
